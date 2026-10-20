@@ -703,6 +703,42 @@ func TestRedpandaBootstrapConfig(t *testing.T) {
 	}
 }
 
+func TestRedpandaProtectedMode(t *testing.T) {
+	getClusterConfig := func(t *testing.T, opts ...testcontainers.ContainerCustomizer) *http.Response {
+		t.Helper()
+		ctx := context.Background()
+
+		ctr, err := redpanda.Run(ctx, "docker.redpanda.com/redpandadata/redpanda:v26.3.1", opts...)
+		testcontainers.CleanupContainer(t, ctr)
+		require.NoError(t, err)
+
+		adminAPIURL, err := ctr.AdminAPIAddress(ctx)
+		require.NoError(t, err)
+
+		httpCl := &http.Client{Timeout: 5 * time.Second}
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, adminAPIURL+"/v1/cluster_config?key=protected_mode", nil)
+		require.NoError(t, err)
+		resp, err := httpCl.Do(req)
+		require.NoError(t, err)
+		t.Cleanup(func() { resp.Body.Close() })
+		return resp
+	}
+
+	t.Run("disabled-by-default", func(t *testing.T) {
+		resp := getClusterConfig(t)
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var data map[string]any
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&data))
+		require.Equal(t, false, data["protected_mode"])
+	})
+
+	t.Run("enabled-via-bootstrap-config", func(t *testing.T) {
+		resp := getClusterConfig(t, redpanda.WithBootstrapConfig("protected_mode", true))
+		require.Equal(t, http.StatusForbidden, resp.StatusCode)
+	})
+}
+
 func TestRedpandaHTTPProxy(t *testing.T) {
 	ctx := context.Background()
 

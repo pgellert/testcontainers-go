@@ -78,6 +78,15 @@ func Run(ctx context.Context, img string, opts ...testcontainers.ContainerCustom
 		settings.EnableWasmTransform = false
 	}
 
+	// Redpanda 26.3+ enables protected_mode, which rejects unauthenticated
+	// non-loopback clients, i.e. every client on the mapped ports. It adds no
+	// protection here, as those ports are published on purpose.
+	if isAtLeastVersion(img, "26.3") {
+		if _, ok := settings.ExtraBootstrapConfig["protected_mode"]; !ok {
+			settings.ExtraBootstrapConfig["protected_mode"] = false
+		}
+	}
+
 	// 3. Build module options
 	moduleOpts := []testcontainers.ContainerCustomizer{
 		testcontainers.WithConfigModifier(func(c *container.Config) {

@@ -149,6 +149,9 @@ E.g. `WithTLS([]byte(cert), []byte(key))`.
 config file, which is particularly useful for configs requiring a restart when otherwise applied to a running Redpanda instance.
 E.g. `WithBootstrapConfig("config_key", config_value)`, where `config_value` is of type `any`.
 
+For Redpanda 26.3 and later, the module disables `protected_mode`, so that unauthenticated clients can connect through the mapped ports.
+Use `WithBootstrapConfig("protected_mode", true)` to enable it.
+
 #### WithAdminAPIAuthentication
 
 - Since <a href="https://github.com/testcontainers/testcontainers-go/releases/tag/v0.36.0"><span class="tc-version">:material-tag: v0.36.0</span></a>
